@@ -1,0 +1,4 @@
+/mnt/f/gitFiles/games101-assignments/pa0/pa0/build/CMakeFiles/rebuild_cache.dir
+/mnt/f/gitFiles/games101-assignments/pa0/pa0/build/CMakeFiles/edit_cache.dir
+/mnt/f/gitFiles/games101-assignments/pa0/pa0/build/CMakeFiles/assign.dir
+/mnt/f/gitFiles/games101-assignments/pa0/pa0/build/CMakeFiles/Transformation.dir

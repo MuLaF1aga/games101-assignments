@@ -1,0 +1,1 @@
+/usr/bin/c++    -rdynamic CMakeFiles/assign.dir/assignment0.cpp.o  -o assign 
