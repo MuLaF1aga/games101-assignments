@@ -1,0 +1,3 @@
+/mnt/f/gitFiles/games101-assignments/Assignment1/代码框架/build/CMakeFiles/rebuild_cache.dir
+/mnt/f/gitFiles/games101-assignments/Assignment1/代码框架/build/CMakeFiles/edit_cache.dir
+/mnt/f/gitFiles/games101-assignments/Assignment1/代码框架/build/CMakeFiles/Rasterizer.dir

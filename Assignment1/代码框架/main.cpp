@@ -3,6 +3,7 @@
 #include <eigen3/Eigen/Eigen>
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <cmath>
 
 constexpr double MY_PI = 3.1415926;
 
@@ -26,7 +27,21 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
     // TODO: Implement this function
     // Create the model matrix for rotating the triangle around the Z axis.
     // Then return it.
+    Eigen::Matrix4f model_rotatez;
+    model_rotatez << 
+    std::cos(rotation_angle/180.0*MY_PI),-std::sin(rotation_angle/180.0*MY_PI),0,0,
+    std::sin(rotation_angle/180.0*MY_PI),std::cos(rotation_angle/180.0*MY_PI),0,0,
+    0,0,1,0,
+    0,0,0,1;
+    model = model_rotatez * model;
 
+    // Eigen::Matrix4f model_rotatex;
+    // model_rotatex <<
+    // 1,0,0,0,
+    // 0,std::cos(rotation_angle/180.0*MY_PI),-std::sin(rotation_angle/180.0*MY_PI),0,
+    // 0,std::sin(rotation_angle/180.0*MY_PI),std::cos(rotation_angle/180.0*MY_PI),0,
+    // 0,0,0,1;
+    // model = model_rotatex * model;
     return model;
 }
 
@@ -40,7 +55,42 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
     // TODO: Implement this function
     // Create the projection matrix for the given parameters.
     // Then return it.
-
+    float top = std::tan(eye_fov/180.0*MY_PI) * zNear;
+    float bottom = -top;
+    float right = top * aspect_ratio;
+    float left = -right;
+    Eigen::Matrix4f move;
+    move <<
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,-(zNear+zFar)/2,
+    0,0,0,1;
+    Eigen::Matrix4f move_back;
+    move_back << 
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,(zNear+zFar)/2,
+    0,0,0,1;
+    Eigen::Matrix4f orthographic;
+    orthographic <<
+    2/(right-left),0,0,0,
+    0,2/(top-bottom),0,0,
+    0,0,2/(zNear-zFar),0,
+    0,0,0,1;
+    Eigen::Matrix4f perspective;
+    perspective << 
+    zNear,0,0,0,
+    0,zNear,0,0,
+    0,0,zNear+zFar,-zNear*zFar,
+    0,0,1,0;
+    Eigen::Matrix4f perspective_result;
+    perspective_result <<
+    2*zNear/(right-left),0,(left+right)/(left-right),0,
+    0,2*zNear/(top-bottom),(bottom+top)/(bottom-top),0,
+    0,0,(zFar+zNear)/(zNear-zFar),2*zFar*zNear/(zFar-zNear),
+    0,0,1,0;
+    // projection = perspective_result * projection;
+    projection = move_back * orthographic * move * perspective * projection;
     return projection;
 }
 
