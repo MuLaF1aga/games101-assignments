@@ -45,6 +45,30 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
     return model;
 }
 
+Eigen::Matrix4f get_rotation(Eigen::Vector3f axis, float angle){
+    axis = axis.normalized();
+    Eigen::Matrix4f rotationMat = Eigen::Matrix4f::Identity();
+    Eigen::Vector3f t(1.0f,2.0f,8.0f);
+    t = t.normalized();
+    Eigen::Vector3f u = axis.cross(t).normalized();
+    Eigen::Vector3f v = axis.cross(u).normalized();
+    Eigen::Matrix4f rotateAxis;
+    rotateAxis <<
+    axis(0),axis(1),axis(2),0,
+    u(0),u(1),u(2),0,
+    v(0),v(1),v(2),0,
+    0,0,0,1;
+    Eigen::Matrix4f rotateBack = rotateAxis.transpose();
+    Eigen::Matrix4f model_rotatex;
+    model_rotatex <<
+    1,0,0,0,
+    0,std::cos(angle/180.0*MY_PI),-std::sin(angle/180.0*MY_PI),0,
+    0,std::sin(angle/180.0*MY_PI),std::cos(angle/180.0*MY_PI),0,
+    0,0,0,1;
+    rotationMat = rotateBack * model_rotatex * rotateAxis * rotationMat;
+    return rotationMat;
+}
+
 Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
                                       float zNear, float zFar)
 {
@@ -97,6 +121,7 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
 int main(int argc, const char** argv)
 {
     float angle = 0;
+    float angle_bonus = 0;//bonus
     bool command_line = false;
     std::string filename = "output.png";
 
@@ -113,6 +138,8 @@ int main(int argc, const char** argv)
     rst::rasterizer r(700, 700);
 
     Eigen::Vector3f eye_pos = {0, 0, 5};
+
+    Eigen::Vector3f axis_bonus = {1, 0, 0};//bonus
 
     std::vector<Eigen::Vector3f> pos{{2, 0, -2}, {0, 2, -2}, {-2, 0, -2}};
 
@@ -143,7 +170,8 @@ int main(int argc, const char** argv)
     while (key != 27) {
         r.clear(rst::Buffers::Color | rst::Buffers::Depth);
 
-        r.set_model(get_model_matrix(angle));
+        // r.set_model(get_model_matrix(angle));
+        r.set_model(get_rotation(axis_bonus,angle_bonus));
         r.set_view(get_view_matrix(eye_pos));
         r.set_projection(get_projection_matrix(45, 1, 0.1, 50));
 
@@ -161,6 +189,12 @@ int main(int argc, const char** argv)
         }
         else if (key == 'd') {
             angle -= 10;
+        }
+        else if (key == 'w'){
+            angle_bonus += 10;
+        }
+        else if (key == 's'){
+            angle_bonus -= 10;
         }
     }
 
