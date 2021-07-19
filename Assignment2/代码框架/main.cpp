@@ -30,9 +30,44 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
 
 Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, float zFar)
 {
+    Eigen::Matrix4f projection = Eigen::Matrix4f::Identity();
     // TODO: Copy-paste your implementation from the previous assignment.
-    Eigen::Matrix4f projection;
-
+    float top = std::tan(eye_fov/180.0*MY_PI) * zNear;
+    float bottom = -top;
+    float right = top * aspect_ratio;
+    float left = -right;
+    Eigen::Matrix4f move;
+    move <<
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,-(zNear+zFar)/2,
+    0,0,0,1;
+    Eigen::Matrix4f move_back;
+    move_back << 
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,(zNear+zFar)/2,
+    0,0,0,1;
+    Eigen::Matrix4f orthographic;
+    orthographic <<
+    2/(right-left),0,0,0,
+    0,2/(top-bottom),0,0,
+    0,0,2/(zNear-zFar),0,
+    0,0,0,1;
+    Eigen::Matrix4f perspective;
+    perspective << 
+    zNear,0,0,0,
+    0,zNear,0,0,
+    0,0,zNear+zFar,-zNear*zFar,
+    0,0,1,0;
+    Eigen::Matrix4f perspective_result;
+    perspective_result <<
+    2*zNear/(right-left),0,(left+right)/(left-right),0,
+    0,2*zNear/(top-bottom),(bottom+top)/(bottom-top),0,
+    0,0,(zFar+zNear)/(zNear-zFar),2*zFar*zNear/(zFar-zNear),
+    0,0,1,0;
+    projection = perspective_result * projection;
+    // projection = move_back * orthographic * move * perspective * projection;
     return projection;
 }
 
