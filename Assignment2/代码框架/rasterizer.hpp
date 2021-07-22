@@ -67,6 +67,7 @@ namespace rst
         void set_projection(const Eigen::Matrix4f& p);
 
         void set_pixel(const Eigen::Vector3f& point, const Eigen::Vector3f& color);
+        Eigen::Vector3f get_pixel(const Eigen::Vector3f& point);
 
         void clear(Buffers buff);
 
@@ -92,7 +93,7 @@ namespace rst
 
         std::vector<Eigen::Vector3f> frame_buf;
 
-        std::vector<float> depth_buf;
+        std::vector<std::vector<float>> depth_buf;
         int get_index(int x, int y);
 
         int width, height;

@@ -40,27 +40,34 @@ auto to_vec4(const Eigen::Vector3f& v3, float w = 1.0f)
 }
 
 
-static bool insideTriangle(int x, int y, const Vector3f* _v)
+static bool* insideTriangle(int x, int y, const Vector3f* _v, bool * ret)
 {   
     // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
     float xCenter = x + 0.5;
     float yCenter = y + 0.5;
     Eigen::Vector2f v_2d[3];
-    Eigen::Vector2f v_target = Vector2f(xCenter,yCenter);
+    Eigen::Vector2f v_target[4];
+    v_target[0] = Vector2f(xCenter + 0.25, yCenter + 0.25);
+    v_target[1] = Vector2f(xCenter - 0.25, yCenter + 0.25);
+    v_target[2] = Vector2f(xCenter + 0.25, yCenter - 0.25);
+    v_target[3] = Vector2f(xCenter - 0.25, yCenter - 0.25);
     for(int i = 0;i < 3;i++){
         v_2d[i] = Vector2f(_v[i].x(),_v[i].y());
     }
-    Eigen::Vector2f line1 = v_2d[1] - v_2d[0];
-    Eigen::Vector2f line2 = v_2d[2] - v_2d[1];
-    Eigen::Vector2f line3 = v_2d[0] - v_2d[2];
-    Eigen::Vector2f lineEvaluate1 = v_target - v_2d[0];
-    Eigen::Vector2f lineEvaluate2 = v_target - v_2d[1];
-    Eigen::Vector2f lineEvaluate3 = v_target - v_2d[2];
-    if((line1.x()*lineEvaluate1.y() - line1.y()*lineEvaluate1.x()) > 0 && (line2.x()*lineEvaluate2.y() - line2.y()*lineEvaluate2.x()) > 0 && (line3.x()*lineEvaluate3.y() - line3.y()*lineEvaluate3.x()) > 0){
-        return true;
-    }else{
-        return false;
+    for(int i = 0;i < 4;i++){
+        Eigen::Vector2f line1 = v_2d[1] - v_2d[0];
+        Eigen::Vector2f line2 = v_2d[2] - v_2d[1];
+        Eigen::Vector2f line3 = v_2d[0] - v_2d[2];
+        Eigen::Vector2f lineEvaluate1 = v_target[i] - v_2d[0];
+        Eigen::Vector2f lineEvaluate2 = v_target[i] - v_2d[1];
+        Eigen::Vector2f lineEvaluate3 = v_target[i] - v_2d[2];
+        if((line1.x()*lineEvaluate1.y() - line1.y()*lineEvaluate1.x()) > 0 && (line2.x()*lineEvaluate2.y() - line2.y()*lineEvaluate2.x()) > 0 && (line3.x()*lineEvaluate3.y() - line3.y()*lineEvaluate3.x()) > 0){
+            ret[i] = true;
+        }else{
+            ret[i] = false;
+        }
     }
+    return ret;
 }
 
 static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector3f* v)
@@ -146,15 +153,39 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
 
     for(int sampleX = (int)left; sampleX < right; sampleX++){
         for(int sampleY = (int)bottom; sampleY < top; sampleY++){
-            if(insideTriangle(sampleX,sampleY,vCheck)){
-                auto[alpha, beta, gamma] = computeBarycentric2D(sampleX + 0.5, sampleY + 0.5, t.v);
-                float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-                float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-                z_interpolated *= w_reciprocal;
+            bool isInside[4];
+            insideTriangle(sampleX,sampleY,vCheck,isInside);
+            int count = 0;
+            for(int i = 0;i < 4;i++){
+                if(isInside[i]) count++;
+            }
+            if(count > 0){
+                Eigen::Vector2f samples[4];
+                samples[0] = Vector2f(sampleX + 0.5 + 0.25,sampleY + 0.5 + 0.25);
+                samples[1] = Vector2f(sampleX + 0.5 - 0.25,sampleY + 0.5 + 0.25);
+                samples[2] = Vector2f(sampleX + 0.5 + 0.25,sampleY + 0.5 - 0.25);
+                samples[3] = Vector2f(sampleX + 0.5 - 0.25,sampleY + 0.5 - 0.25);
+                float z_interpolated[4];
+                for(int i = 0;i < 4;i++){
+                    auto[alpha, beta, gamma] = computeBarycentric2D(samples[i].x(), samples[i].y(), t.v);
+                    float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                    z_interpolated[i] = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                    z_interpolated[i] *= w_reciprocal;
+                }
                 int z_index = get_index(sampleX,sampleY);
-                if(z_interpolated < depth_buf[z_index]){
-                    depth_buf[z_index] = z_interpolated;
-                    set_pixel(Vector3f(width - (float)sampleX,height - (float)sampleY,1),t.getColor());
+                for(int i = 0;i < 4;i++){
+                    if(z_interpolated[i] < depth_buf[i][z_index]){
+                        depth_buf[i][z_index] = z_interpolated[i];
+                    }else{
+                        count--;
+                    }
+                }
+                if(count > 0){
+                    if(count <= 2 && count >=1){
+                        // // std::cout << "super sampling succeed" << std::endl;
+                        // std::cout << get_pixel(Vector3f(width - (float)sampleX,height - (float)sampleY,1))*(4-count)/4 << std::endl;
+                    }
+                    set_pixel(Vector3f(width - (float)sampleX,height - (float)sampleY,1),t.getColor()*count/4);
                 }
             }
         }
@@ -192,14 +223,19 @@ void rst::rasterizer::clear(rst::Buffers buff)
     }
     if ((buff & rst::Buffers::Depth) == rst::Buffers::Depth)
     {
-        std::fill(depth_buf.begin(), depth_buf.end(), std::numeric_limits<float>::infinity());
+        for(int i = 0;i < 4;i++){
+            std::fill(depth_buf[i].begin(), depth_buf[i].end(), std::numeric_limits<float>::infinity());
+        }
     }
 }
 
 rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
 {
     frame_buf.resize(w * h);
-    depth_buf.resize(w * h);
+    depth_buf.resize(4);
+    for(int i = 0;i < 4;i++){
+        depth_buf[i].resize(w * h);
+    }
 }
 
 int rst::rasterizer::get_index(int x, int y)
@@ -213,6 +249,11 @@ void rst::rasterizer::set_pixel(const Eigen::Vector3f& point, const Eigen::Vecto
     auto ind = (height-1-point.y())*width + point.x();
     frame_buf[ind] = color;
 
+}
+
+Eigen::Vector3f rst::rasterizer::get_pixel(const Eigen::Vector3f& point){
+    auto ind = (height-1-point.y())*width + point.x();
+    return frame_buf[ind];
 }
 
 // clang-format on
