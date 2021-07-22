@@ -14,11 +14,18 @@ int main(){
     std::cout << std::acos(-1) << std::endl;
     std::cout << std::sin(30.0/180.0*acos(-1)) << std::endl;
 
+    
+    // Eigen::Vector2f vec1(3,4);
+    // Eigen::Vector2f vec2(5,6);
+    // std::cout << vec1.cross(vec2);
+
     // Example of vector
     std::cout << "Example of vector \n";
     // vector definition
     Eigen::Vector3f v(1.0f,2.0f,3.0f);
     Eigen::Vector3f w(1.0f,0.0f,0.0f);
+    std::cout << "Example of cross product \n";
+    std::cout << v.cross(w) << std::endl;
     // vector output
     std::cout << "Example of output \n";
     std::cout << v << std::endl;

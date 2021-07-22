@@ -43,6 +43,24 @@ auto to_vec4(const Eigen::Vector3f& v3, float w = 1.0f)
 static bool insideTriangle(int x, int y, const Vector3f* _v)
 {   
     // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
+    float xCenter = x + 0.5;
+    float yCenter = y + 0.5;
+    Eigen::Vector2f v_2d[3];
+    Eigen::Vector2f v_target = Vector2f(xCenter,yCenter);
+    for(int i = 0;i < 3;i++){
+        v_2d[i] = Vector2f(_v[i].x(),_v[i].y());
+    }
+    Eigen::Vector2f line1 = v_2d[1] - v_2d[0];
+    Eigen::Vector2f line2 = v_2d[2] - v_2d[1];
+    Eigen::Vector2f line3 = v_2d[0] - v_2d[2];
+    Eigen::Vector2f lineEvaluate1 = v_target - v_2d[0];
+    Eigen::Vector2f lineEvaluate2 = v_target - v_2d[1];
+    Eigen::Vector2f lineEvaluate3 = v_target - v_2d[2];
+    if((line1.x()*lineEvaluate1.y() - line1.y()*lineEvaluate1.x()) > 0 && (line2.x()*lineEvaluate2.y() - line2.y()*lineEvaluate2.x()) > 0 && (line3.x()*lineEvaluate3.y() - line3.y()*lineEvaluate3.x()) > 0){
+        return true;
+    }else{
+        return false;
+    }
 }
 
 static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector3f* v)
@@ -108,6 +126,39 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
     
     // TODO : Find out the bounding box of current triangle.
     // iterate through the pixel and find if the current pixel is inside the triangle
+    float left,right,top,bottom;
+    left = 10000;
+    right = -10000;
+    top = -10000;
+    bottom = 10000;
+    for(auto vertex = std::begin(v);vertex != std::end(v);vertex++){
+        Eigen::Vector4f i = *vertex;
+        left = i(0) < left ? i(0) : left;
+        right = i(0) > right ? i(0) : right;
+        top = i(1) > top ? i(1) : top;
+        bottom = i(1) < bottom ? i(1) : bottom;
+    }
+
+    Eigen::Vector3f vCheck[3];
+    for(int i = 0;i < 3;i++){
+        vCheck[i] = Vector3f(t.v[i].x(),t.v[i].y(),1);
+    }
+
+    for(int sampleX = (int)left; sampleX < right; sampleX++){
+        for(int sampleY = (int)bottom; sampleY < top; sampleY++){
+            if(insideTriangle(sampleX,sampleY,vCheck)){
+                auto[alpha, beta, gamma] = computeBarycentric2D(sampleX + 0.5, sampleY + 0.5, t.v);
+                float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                z_interpolated *= w_reciprocal;
+                int z_index = get_index(sampleX,sampleY);
+                if(z_interpolated < depth_buf[z_index]){
+                    depth_buf[z_index] = z_interpolated;
+                    set_pixel(Vector3f(width - (float)sampleX,height - (float)sampleY,1),t.getColor());
+                }
+            }
+        }
+    }
 
     // If so, use the following code to get the interpolated z value.
     //auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
