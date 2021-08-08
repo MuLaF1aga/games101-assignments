@@ -264,6 +264,63 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t, const std::array<Eig
     //    * v[i].w() is the vertex view space depth value z.
     //    * Z is interpolated view space depth for the current pixel
     //    * zp is depth between zNear and zFar, used for z-buffer
+    auto v = t.toVector4();
+    
+    // TODO : Find out the bounding box of current triangle.
+    // iterate through the pixel and find if the current pixel is inside the triangle
+    float left,right,top,bottom;
+    left = 10000;
+    right = -10000;
+    top = -10000;
+    bottom = 10000;
+    for(auto vertex = std::begin(v);vertex != std::end(v);vertex++){
+        Eigen::Vector4f i = *vertex;
+        left = i(0) < left ? i(0) : left;
+        right = i(0) > right ? i(0) : right;
+        top = i(1) > top ? i(1) : top;
+        bottom = i(1) < bottom ? i(1) : bottom;
+    }
+
+    Eigen::Vector4f vCheck[3];
+    for(int i = 0;i < 3;i++){
+        vCheck[i] = Vector4f(t.v[i].x(),t.v[i].y(),1,1);
+    }
+
+    for(int sampleX = (int)left; sampleX < right; sampleX++){
+        for(int sampleY = (int)bottom; sampleY < top; sampleY++){
+            bool isInside = insideTriangle(sampleX,sampleY,vCheck);
+            if(isInside){
+                bool isVisible = false;
+                float z_interpolated;
+                auto[alpha, beta, gamma] = computeBarycentric2D(sampleX, sampleY, t.v);
+                float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                z_interpolated *= w_reciprocal;
+                
+                int z_index = get_index(sampleX,sampleY);
+                if(z_interpolated < depth_buf[z_index]){
+                    depth_buf[z_index] = z_interpolated;
+                    isVisible = true;
+                }
+                if(isVisible){
+                    Eigen::Vector3f interpolated_color;
+                    interpolated_color << 0.0,0.0,0.0;
+                    float col_alpha = (-(sampleX-t.v[1].x())*(t.v[2].y()-t.v[1].y())+(sampleY-t.v[1].y())*(t.v[2].x()-t.v[1].x()))/(-(t.v[0].x()-t.v[1].x())*(t.v[2].y()-t.v[1].y())+(t.v[0].y()-t.v[1].y())*(t.v[2].x()-t.v[1].x()));
+                    float col_beta = (-(sampleX-t.v[2].x())*(t.v[0].y()-t.v[2].y())+(sampleY-t.v[2].y())*(t.v[0].x()-t.v[2].x()))/(-(t.v[1].x()-t.v[2].x())*(t.v[0].y()-t.v[2].y())+(t.v[1].y()-t.v[2].y())*(t.v[0].x()-t.v[2].x()));
+                    float col_gamma = 1 - col_alpha - col_beta;
+                    interpolated_color += t.color[0]*col_alpha + t.color[1]*col_beta + t.color[2]*col_gamma;
+                    Eigen::Vector3f interpolated_normal = t.normal[0] * col_alpha + t.normal[1] * col_beta + t.normal[2] * col_gamma;
+                    Eigen::Vector2f interpolated_texcoords = t.tex_coords[0] * col_alpha + t.tex_coords[1] * col_beta + t.tex_coords[2] * col_gamma;
+                    Eigen::Vector3f interpolated_shadingcoords = view_pos[0] * col_alpha + view_pos[1] * col_beta + view_pos[2] * col_gamma;
+                    fragment_shader_payload payload = fragment_shader_payload(interpolated_color, interpolated_normal.normalized(),interpolated_texcoords,texture ? &*texture : nullptr);
+                    payload.view_pos = interpolated_shadingcoords;
+                    auto pixel_color = fragment_shader(payload);
+
+                    set_pixel(Vector2i(width - (float)sampleX,height - (float)sampleY),pixel_color);
+                }
+            }
+        }
+    }
 
     // float Z = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
     // float zp = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
