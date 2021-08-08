@@ -6,6 +6,18 @@
 
 #IncludeRegexTransform: 
 
+/mnt/d/develop/games101-assignments/Assignment3/Code/OBJ_Loader.h
+iostream
+-
+vector
+-
+string
+-
+fstream
+-
+math.h
+-
+
 /mnt/d/develop/games101-assignments/Assignment3/Code/Shader.hpp
 eigen3/Eigen/Eigen
 -
@@ -27,6 +39,28 @@ Texture.hpp
 /mnt/d/develop/games101-assignments/Assignment3/Code/Texture.hpp
 
 /mnt/d/develop/games101-assignments/Assignment3/Code/global.hpp
+
+/mnt/d/develop/games101-assignments/Assignment3/Code/main.cpp
+iostream
+-
+opencv2/opencv.hpp
+-
+stdlib.h
+-
+math.h
+-
+global.hpp
+/mnt/d/develop/games101-assignments/Assignment3/Code/global.hpp
+rasterizer.hpp
+/mnt/d/develop/games101-assignments/Assignment3/Code/rasterizer.hpp
+Triangle.hpp
+/mnt/d/develop/games101-assignments/Assignment3/Code/Triangle.hpp
+Shader.hpp
+/mnt/d/develop/games101-assignments/Assignment3/Code/Shader.hpp
+Texture.hpp
+/mnt/d/develop/games101-assignments/Assignment3/Code/Texture.hpp
+OBJ_Loader.h
+/mnt/d/develop/games101-assignments/Assignment3/Code/OBJ_Loader.h
 
 /mnt/d/develop/games101-assignments/Assignment3/Code/rasterizer.cpp
 algorithm
